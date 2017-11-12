@@ -183,6 +183,8 @@ fatigue = zeros(1, nu)
 for mu in arange(1, nu).reshape(-1):
     fatigue[mu] = dot(dot(mufatrate[mu], (FatFac / fat)), P[mu])
 
+########## STOPPED HERE ################
+
 # the only variable is the relative force: Pr(mu, act), so this part is
 # calculated once here
 
@@ -273,7 +275,7 @@ for i in arange(1, fthsamp).reshape(-1):
             ctREL[mu, i] = ctFAT[mu, i] / ct[mu]
             nmufrFAT[mu, i] = dot(ctFAT[mu, i], (mufrFAT[mu, i] / 1000))    # adapted normalized Stimulus Rate (CT * FR)
             nmufrMAX = dot(ctFAT[mu, i], (mufrMAX / 1000))                  # normalized FR at max excitation
-            
+
             if nmufrFAT[mu, i] <= 0.4:                                      # fusion level at adapted firing rate
                 PrFAT[mu, i] = dot(nmufrFAT[mu, i] / 0.4, sPr)              # linear portion of curve
             if nmufrFAT[mu, i] > 0.4:
