@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 from __future__ import division
+from __future__ import print_function
 import numpy as np
 from smop.core import *
 """
@@ -12,9 +13,9 @@ Python port by Ian Danforth
 
 # Model input parameters
 
-nu = 120            # number of neurons (ie. motor units) in the modeled pool ("n")
-samprate = 10       # sample rate (10 Hz is suggested)
-res = 100           # resolution of activations (set = 10 for 0.1 activation resolution, 100 for 0.01)
+nu = 3            # number of neurons (ie. motor units) in the modeled pool ("n")
+samprate = 2       # sample rate (10 Hz is suggested)
+res = 2           # resolution of activations (set = 10 for 0.1 activation resolution, 100 for 0.01)
 # allows for hopping through activations to more rapidly find that which
 # meets the threshold (10 means every 1/10th of maxact)
 hop = 20
@@ -40,7 +41,7 @@ tL = 90             # longest contraction time (90)
 
 fthscale = 0.5      # sets %MVC level for the trial duration (100% MVC is 1.00)
 con = '0.50'        # for output file names
-fthtime = 100       # duration to run trial (seconds)
+fthtime = 4       # duration to run trial (seconds)
 
 fthsamp = dot(fthtime, samprate)
 fth = zeros(1, fthsamp)
@@ -183,7 +184,6 @@ fatigue = zeros(1, nu)
 for mu in arange(1, nu).reshape(-1):
     fatigue[mu] = dot(dot(mufatrate[mu], (FatFac / fat)), P[mu])
 
-########## STOPPED HERE ################
 
 # the only variable is the relative force: Pr(mu, act), so this part is
 # calculated once here
@@ -197,8 +197,12 @@ for force in arange(1, 100).reshape(-1):
     # so it speeds the search up by starting at this excitation
     startact[force] = 0
     for act in arange(1, maxact).reshape(-1):
+        one = (dot(totalP[act] / maxP, 100))
         if (dot(totalP[act] / maxP, 100)) < force:
             startact[force] = act - 1
+        # TODO - Add this in
+        # else:
+        #     break # Stop search once value is found
 
 Pchangecurves = zeros(nu, maxact)
 
@@ -207,7 +211,7 @@ for act in arange(1, maxact).reshape(-1):
         # just used for graphical display
         Pchangecurves[mu, act] = dot(dot(fatigue[mu], Pr[mu, act]), P[mu])
 
-print 'start of fatigue analysis'
+print('start of fatigue analysis')
 
 # Moving through force time-history and determing the excitation required
 # to meet the target force at each time
@@ -239,6 +243,7 @@ for i in arange(1, fthsamp).reshape(-1):
     if i == dot(dot((timer + 1), samprate), 60):
         timer = timer + 1
         current = i / samprate
+        print(current)
 
     # used to start at the minimum possible excitation (lowest it can be is 1)
     # so start with excitation needed for fth(i) when rested (won't be lower than this)
@@ -272,6 +277,7 @@ for i in arange(1, fthsamp).reshape(-1):
             mufrFAT[mu, i] = mufr[mu, act] - adaptFR[mu, i]     # adapted motor unit firing rate: based on time since recruitment
             mufrMAX = mufr[mu, maxact] - adaptFR[mu, i]         # adapted FR at max excitation
             ctFAT[mu, i] = dot(ct[mu], (1 + dot(ctSF, (1 - Pnow[mu, i] / P[mu]))))  # corrected contraction time: based on MU fatigue
+
             ctREL[mu, i] = ctFAT[mu, i] / ct[mu]
             nmufrFAT[mu, i] = dot(ctFAT[mu, i], (mufrFAT[mu, i] / 1000))    # adapted normalized Stimulus Rate (CT * FR)
             nmufrMAX = dot(ctFAT[mu, i], (mufrMAX / 1000))                  # normalized FR at max excitation
@@ -280,55 +286,56 @@ for i in arange(1, fthsamp).reshape(-1):
                 PrFAT[mu, i] = dot(nmufrFAT[mu, i] / 0.4, sPr)              # linear portion of curve
             if nmufrFAT[mu, i] > 0.4:
                 PrFAT[mu, i] = 1 - exp(dot(- 2, (nmufrFAT[mu, i] ** 3)))
-            muPt[mu, i] = dot(PrFAT[mu, i], Pnow[mu, i])                    # MU force at the current time (muPt): based on adapted position on fusion curve
-            if nmufrMAX <= 0.4:                                             # fusion force at 100% maximum excitation
-                PrMAX = dot(nmufrMAX / 0.4, sPr)
-            if nmufrMAX > 0.4:
-                PrMAX = 1 - exp(dot(- 2, (nmufrMAX ** 3)))
-            muPtMAX[mu, i] = dot(PrMAX, Pnow[mu, i])
 
-        TPt[i] = sum(muPt[:, i]) / maxP                                     # total sum of MU forces at the current time (TPt)
-        TPtMAX[i] = sum(muPtMAX[:, i]) / maxP
-        # used to speed up the search for the right excitation to meet the current target
-        if TPt[i] < fth[i] and act == maxact:
-            break
-        if TPt[i] < fth[i]:
-            act = act + acthop
-            if act > maxact:
-                act = copy(maxact)
-        if TPt[i] >= fth[i] and acthop == 1:
-            break # stop searching as the correct excitation is found
-        if TPt[i] >= fth[i] and acthop > 1:
-            act = act - (acthop - 1)    # if the last large jump was too much, it goes back and starts increasing by 1
-            if act < 1:
-                act = 1
-            acthop = 1
+    #         muPt[mu, i] = dot(PrFAT[mu, i], Pnow[mu, i])                    # MU force at the current time (muPt): based on adapted position on fusion curve
+    #         if nmufrMAX <= 0.4:                                             # fusion force at 100% maximum excitation
+    #             PrMAX = dot(nmufrMAX / 0.4, sPr)
+    #         if nmufrMAX > 0.4:
+    #             PrMAX = 1 - exp(dot(- 2, (nmufrMAX ** 3)))
+    #         muPtMAX[mu, i] = dot(PrMAX, Pnow[mu, i])
 
-    for mu in arange(1, nu).reshape(-1):
-        # can be modified to reset if the MU turns off
-        if muON[mu] == 0 and (act / res) >= thr[mu]:
-            muON[mu] = i # time of onset of mu recruitment (s)
+    #     TPt[i] = sum(muPt[:, i]) / maxP                                     # total sum of MU forces at the current time (TPt)
+    #     TPtMAX[i] = sum(muPtMAX[:, i]) / maxP
+    #     # used to speed up the search for the right excitation to meet the current target
+    #     if TPt[i] < fth[i] and act == maxact:
+    #         break
+    #     if TPt[i] < fth[i]:
+    #         act = act + acthop
+    #         if act > maxact:
+    #             act = copy(maxact)
+    #     if TPt[i] >= fth[i] and acthop == 1:
+    #         break # stop searching as the correct excitation is found
+    #     if TPt[i] >= fth[i] and acthop > 1:
+    #         act = act - (acthop - 1)    # if the last large jump was too much, it goes back and starts increasing by 1
+    #         if act < 1:
+    #             act = 1
+    #         acthop = 1
 
-    Ptarget[i] = TPt[i] # modeled force level ?? do I need to do this, or can I just use TPt(i)
-    Tact[i] = act # descending (not adapted) excitation required to meet the target force at the current time
+    # for mu in arange(1, nu).reshape(-1):
+    #     # can be modified to reset if the MU turns off
+    #     if muON[mu] == 0 and (act / res) >= thr[mu]:
+    #         muON[mu] = i # time of onset of mu recruitment (s)
 
-    # Calculating the fatigue (force loss) for each motor unit
-    for mu in arange(1, nu).reshape(-1):
-        if mufrFAT[mu, i] >= 0:
-            Pchange[mu, i] = dot(
-                dot(- 1, (fatigue[mu] / samprate)), PrFAT[mu, i])
-        else:
-            if mufrFAT[mu, i] < recminfr:
-                Pchange[mu, i] = recovery(mu) / samprate
-        if i < 2:
-            Pnow[mu, i + 1] = P[mu]
-        else:
-            if i >= 2:
-                Pnow[mu, i + 1] = Pnow[mu, i] + Pchange[mu, i]  # instantaneous strength of MU, right now without adaptation
-        if Pnow[mu, i + 1] >= P[mu]:
-            Pnow[mu, i + 1] = P[mu] # does not let it increase past rested strength
-        if Pnow[mu, i + 1] < 0:
-            Pnow[mu, i + 1] = 0 # does not let it fatigue below zero
+    # Ptarget[i] = TPt[i] # modeled force level ?? do I need to do this, or can I just use TPt(i)
+    # Tact[i] = act # descending (not adapted) excitation required to meet the target force at the current time
+
+    # # Calculating the fatigue (force loss) for each motor unit
+    # for mu in arange(1, nu).reshape(-1):
+    #     if mufrFAT[mu, i] >= 0:
+    #         Pchange[mu, i] = dot(
+    #             dot(- 1, (fatigue[mu] / samprate)), PrFAT[mu, i])
+    #     else:
+    #         if mufrFAT[mu, i] < recminfr:
+    #             Pchange[mu, i] = recovery(mu) / samprate
+    #     if i < 2:
+    #         Pnow[mu, i + 1] = P[mu]
+    #     else:
+    #         if i >= 2:
+    #             Pnow[mu, i + 1] = Pnow[mu, i] + Pchange[mu, i]  # instantaneous strength of MU, right now without adaptation
+    #     if Pnow[mu, i + 1] >= P[mu]:
+    #         Pnow[mu, i + 1] = P[mu] # does not let it increase past rested strength
+    #     if Pnow[mu, i + 1] < 0:
+    #         Pnow[mu, i + 1] = 0 # does not let it fatigue below zero
 
 Tstrength = zeros(1, fthsamp)
 for i in arange(1, fthsamp).reshape(-1):
@@ -344,7 +351,7 @@ for i in arange(1, fthsamp).reshape(-1):
 # Output
 EndStrength = (dot(TPtMAX[fthsamp], 100))
 
-print endurtime
+print(endurtime)
 
 for mu in arange(0, nu).reshape(-1):
     if mu == 0:
