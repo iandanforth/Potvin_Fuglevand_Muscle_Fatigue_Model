@@ -205,7 +205,7 @@ def main(arguments):
     nmufrFAT = np.zeros((p.nu, fthsamp))
     PrFAT = np.zeros((p.nu, fthsamp))
     muPt = np.zeros((p.nu, fthsamp))
-    TPt = np.zeros((p.nu, fthsamp))
+    TPt = np.zeros(fthsamp)
     Ptarget = np.zeros(fthsamp)
     Tact = np.zeros(fthsamp)
     Pchange = np.zeros((p.nu, fthsamp))
@@ -236,7 +236,8 @@ def main(arguments):
 
         act_hop = round(maxact / p.hop) # resets 'act_hop' to larger value for new sample
         # TODO: This is funky and led to an off-by-one error, rethink how to get this index
-        act = int(copy(s)) - 1 # start at lowest value then start jumping by 'act_hop'
+        print("S", s)
+        act = int(s) - 1 # start at lowest value then start jumping by 'act_hop'
         # this starts at the mimimum (s) then searches for excitation required to meet the target
         for a in range(maxact):
             act_temp[i, a] = act
@@ -272,6 +273,32 @@ def main(arguments):
                     PrFAT[mu, i] = (nmufrFAT[mu, i] / 0.4) * sPr # linear portion of curve
                 if nmufrFAT[mu, i] > 0.4:
                     PrFAT[mu, i] = 1 - np.exp( -2 * (nmufrFAT[mu, i] ** 3))
+
+                muPt[mu, i] = PrFAT[mu, i] * forces_now[mu, i]
+                if nmufrMAX <= 0.4:
+                    PrMAX = (nmufrMAX / 0.4) * sPr
+                else:
+                    PrMAX = 1 - np.exp(-2 * (nmufrMAX ** 3))
+                muPtMAX[mu, i] = PrMAX * forces_now[mu, i]
+
+            # total sum of MU forces at the current time (TPt)
+            TPt[i] = np.sum(muPt[:, i])
+            TPtMAX[i] = np.sum(muPtMAX[:, i]) / max_force
+            # used to speed up the search for the right excitation to meet the current target
+            if (TPt[i] < fth[i]) and (act == maxact):
+                break
+            if TPt[i] < fth[i]:
+                act = act + act_hop
+                if act > maxact:
+                    act = copy(maxact)
+            if TPt[i] >= fth[i] and act_hop == 1:
+                break # stop searching as the correct excitation is found
+            if TPt[i] >= fth[i] and act_hop > 1:
+                # if the last large jump was too much, it goes back and starts increasing by 1
+                act = act - (act_hop - 1)
+                if act < 1:
+                    act = 1
+                act_hop = 1
 
 
 if __name__ == '__main__':

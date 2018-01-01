@@ -9,12 +9,12 @@
             "os_name": "posix",
             "platform_machine": "x86_64",
             "platform_python_implementation": "CPython",
-            "platform_release": "3.13.0-135-generic",
-            "platform_system": "Linux",
-            "platform_version": "#184-Ubuntu SMP Wed Oct 18 11:55:51 UTC 2017",
-            "python_full_version": "2.7.6",
+            "platform_release": "16.4.0",
+            "platform_system": "Darwin",
+            "platform_version": "Darwin Kernel Version 16.4.0: Thu Dec 22 22:53:21 PST 2016; root:xnu-3789.41.3~3/RELEASE_X86_64",
+            "python_full_version": "2.7.10",
             "python_version": "2.7",
-            "sys_platform": "linux2"
+            "sys_platform": "darwin"
         },
         "pipfile-spec": 6,
         "requires": {},

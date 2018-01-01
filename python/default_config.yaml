@@ -1,9 +1,9 @@
 run_name: default
 parameters:
   # Model input parameters
-  nu: 120            # number of neurons (ie. motor units) in the modeled pool ("n")
-  samprate: 10       # sample rate (10 Hz is suggested)
-  res: 100           # resolution of activations (set: 10 for 0.1 activation resolution, 100 for 0.01)
+  nu: 3            # number of neurons (ie. motor units) in the modeled pool ("n")
+  samprate: 2       # sample rate (10 Hz is suggested)
+  res: 2           # resolution of activations (set: 10 for 0.1 activation resolution, 100 for 0.01)
   # allows for hopping through activations to more rapidly find that which
   # meets the threshold (10 means every 1/10th of maxact)
   hop: 20
@@ -29,4 +29,4 @@ parameters:
 
   fthscale: 0.5      # sets %MVC level for the trial duration (100% MVC is 1.00)
   con: '0.50'        # for output file names
-  fthtime: 100       # duration to run trial (seconds)
+  fthtime: 4       # duration to run trial (seconds)

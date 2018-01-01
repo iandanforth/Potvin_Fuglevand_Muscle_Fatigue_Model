@@ -224,7 +224,7 @@ ctREL = zeros(nu, fthsamp)
 nmufrFAT = zeros(nu, fthsamp)
 PrFAT = zeros(nu, fthsamp)
 muPt = zeros(nu, fthsamp)
-TPt = zeros(nu, fthsamp)
+TPt = zeros(nu, fthsamp) # TODO: I think this should be 1 dimensional
 Ptarget = zeros(1, fthsamp)
 Tact = zeros(1, fthsamp)
 Pchange = zeros(nu, fthsamp)
@@ -287,29 +287,36 @@ for i in arange(1, fthsamp).reshape(-1):
             if nmufrFAT[mu, i] > 0.4:
                 PrFAT[mu, i] = 1 - exp(dot(- 2, (nmufrFAT[mu, i] ** 3)))
 
-    #         muPt[mu, i] = dot(PrFAT[mu, i], Pnow[mu, i])                    # MU force at the current time (muPt): based on adapted position on fusion curve
-    #         if nmufrMAX <= 0.4:                                             # fusion force at 100% maximum excitation
-    #             PrMAX = dot(nmufrMAX / 0.4, sPr)
-    #         if nmufrMAX > 0.4:
-    #             PrMAX = 1 - exp(dot(- 2, (nmufrMAX ** 3)))
-    #         muPtMAX[mu, i] = dot(PrMAX, Pnow[mu, i])
+            muPt[mu, i] = dot(PrFAT[mu, i], Pnow[mu, i])                    # MU force at the current time (muPt): based on adapted position on fusion curve
+            if nmufrMAX <= 0.4:                                             # fusion force at 100% maximum excitation
+                PrMAX = dot(nmufrMAX / 0.4, sPr)
+            if nmufrMAX > 0.4:
+                PrMAX = 1 - exp(dot(- 2, (nmufrMAX ** 3)))
+            muPtMAX[mu, i] = dot(PrMAX, Pnow[mu, i])
 
-    #     TPt[i] = sum(muPt[:, i]) / maxP                                     # total sum of MU forces at the current time (TPt)
-    #     TPtMAX[i] = sum(muPtMAX[:, i]) / maxP
-    #     # used to speed up the search for the right excitation to meet the current target
-    #     if TPt[i] < fth[i] and act == maxact:
-    #         break
-    #     if TPt[i] < fth[i]:
-    #         act = act + acthop
-    #         if act > maxact:
-    #             act = copy(maxact)
-    #     if TPt[i] >= fth[i] and acthop == 1:
-    #         break # stop searching as the correct excitation is found
-    #     if TPt[i] >= fth[i] and acthop > 1:
-    #         act = act - (acthop - 1)    # if the last large jump was too much, it goes back and starts increasing by 1
-    #         if act < 1:
-    #             act = 1
-    #         acthop = 1
+        # print("Before")
+        # print(TPt)
+        # print(TPt[i])
+        TPt[i] = sum(muPt[:, i]) / maxP                                  # total sum of MU forces at the current time (TPt)
+        # print("After")
+        print(TPt)
+        print(TPt[i])
+        TPtMAX[i] = sum(muPtMAX[:, i]) / maxP
+        # used to speed up the search for the right excitation to meet the current target
+        # quit()
+        if TPt[i] < fth[i] and act == maxact:
+            break
+        if TPt[i] < fth[i]:
+            act = act + acthop
+            if act > maxact:
+                act = copy(maxact)
+        if TPt[i] >= fth[i] and acthop == 1:
+            break # stop searching as the correct excitation is found
+        if TPt[i] >= fth[i] and acthop > 1:
+            act = act - (acthop - 1)    # if the last large jump was too much, it goes back and starts increasing by 1
+            if act < 1:
+                act = 1
+            acthop = 1
 
     # for mu in arange(1, nu).reshape(-1):
     #     # can be modified to reset if the MU turns off
