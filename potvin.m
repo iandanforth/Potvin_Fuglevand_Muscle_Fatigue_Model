@@ -63,7 +63,7 @@ tL = 90;            % longest contraction time (90)
 % Excitation Level
 fthscale = 0.5;             % sets %MVC level for the trial duration (100% MVC is 1.00)
 con = '0.50';               % for output file names
-fthtime = 100;              % duration to run trial (seconds)
+fthtime = 3;              % duration to run trial (seconds)
 
 fthsamp = fthtime * samprate; 
 excitations = zeros(1, fthsamp);
@@ -146,8 +146,6 @@ for mu = 1:nu
     end
 end
 
-return
-
 % Normalized Force
 % Motor unit force, relative to full fusion (Pr) with increasing excitation
 % based on Figure 2 of Fuglevand et al (1993)
@@ -174,8 +172,6 @@ end
 totalP = sum(muP,1);                                % sum of forces across MUs for each excitation (dim 1)
 maxP = totalP(maxact); % CHECKED
 
-return
-
 % Total Force across all motor units when rested
 Pnow = zeros(nu, fthsamp);
 Pnow(:,1) = P(:);
@@ -189,7 +185,7 @@ Pnow(:,1) = P(:);
 % rates is 1800 x 0.57 = 1026 
 
 % fatigue rate for each motor unit  (note: "log" means "ln" in Matlab)
-b2 = log(fatigue_range)/(nu-1);       
+b2 = log(fat)/(nu-1);       
 mufatrate = exp(b2 * (n-1)); % Curve from 1 to 180
 
 % NOMINAL FATIGUE RATES
@@ -244,7 +240,6 @@ acttemp = zeros(fthsamp, maxact);
 muPna = zeros(nu, fthsamp);
 muForceCapacityRel = zeros(nu,fthsamp);
 timer = 0;
-    
    
 for i = 1:fthsamp    
     if i == (timer + 1) * samprate * 60         % shows a timer value every 15 seconds

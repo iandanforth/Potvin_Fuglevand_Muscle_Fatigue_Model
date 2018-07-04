@@ -63,7 +63,7 @@ tL = 90;            % longest contraction time (90)
 % Excitation Level
 fthscale = 0.5;             % sets %MVC level for the trial duration (100% MVC is 1.00)
 con = '0.50';               % for output file names
-fthtime = 1;              % duration to run trial (seconds)
+fthtime = 3;              % duration to run trial (seconds)
 
 fthsamp = fthtime * samprate; 
 excitations = zeros(1, fthsamp);
