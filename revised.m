@@ -71,7 +71,6 @@ for z = 1:fthsamp
     excitations(z) = fthscale;
 end
 
-
 %% Calculations from the Fuglevand, Winter & Patla (1993) Model 
 ns = 1:1:fthsamp;   % array of samples for fth
 excitations = excitations(ns);
@@ -271,7 +270,7 @@ muPtMAX = zeros(nu, fthsamp);
 muON = zeros(1, nu);
 adaptFR = zeros(nu,fthsamp);
 Rdur = zeros(1,nu);
-acttemp = zeros(fthsamp, maxact);
+% acttemp = zeros(fthsamp, maxact);
 muPna = zeros(nu, fthsamp);
 muForceCapacityRel = zeros(nu,fthsamp);
 PrMAX = zeros(1, nu);
@@ -296,35 +295,45 @@ for i = 1:fthsamp
 
     acthop = round(maxact / hop);               % resets 'acthop' to larger value for new sample
     act = s;                                    % start at lowest value then start jumping by 'acthop'
-    for a = 1:maxact                            % this starts at the mimimum (s) then searches for excitation required to meet the target
-        acttemp(i,a) = act;
+    while true                                  % this starts at the mimimum (s) then searches for excitation required to meet the target
+        % For this timestep, activation level, store our starting activation (in the first loop)
+        % acttemp(i, a) = act; % never used even in original code
 
-        % Update our duration if on
+        % Update our active durations for each motor unit
         above = muON > 0;
         Rdur(above) = (i - muON(above) + 1) / samprate;
         % Zero out durations if we go below zero for some reason
         Rdur(Rdur < 0) = 0;
 
-        a = (thr - 1) / (thr(nu) - 1) * adaptSF;
-        b = mufr(:, act) - minfr + 2;
-        c = 1 - exp(-1 * Rdur / tau);
-        adaptFR(:,i) = a .* b' .* c;
+        % Firing rate adaptation curve
+        % q(i)(Eq. 13)
+        ratio = (thr - 1) / (thr(nu) - 1);
+        q = adaptSF * (mufr(:, act) - minfr + 2)' .* ratio;
+
+        % (Eq. 12)
+        intrinsic = 1 - exp(-1 * Rdur / tau);
+        adaptFR(:,i) = q .* intrinsic;
         adaptFR(adaptFR(:,i) < 0,i) = 0;
 
-        mufrFAT(:, i) = mufr(:, act) - adaptFR(:, i);
-        mufrMAX = mufr(:, maxact) - adaptFR(:, i);
+        % Motor unit firing rates with fatigue
+        mufrFAT(:, i) = mufr(:, act) - adaptFR(:, i); % adapted motor unit firing rate: based on time since recruitment
+        mufrMAX = mufr(:, maxact) - adaptFR(:, i); % adapted FR at max excitation
 
-        ctFAT(:, i) = ct .* (1 + ctSF * (1 - Pnow(:, i) ./ P'))';  % corrected contraction time: based on MU fatigue
-        ctREL(:, i) = ctFAT(:, i) ./ ct';
+        % Update contraction times
+        ctFAT(:, i) = ct .* (1 + ctSF * (1 - (Pnow(:, i) ./ P')))';  % corrected contraction time: based on MU fatigue
+        % ctREL(:, i) = ctFAT(:, i) ./ ct'; % unused
 
+        % Calculate normalized firing rate
         nmufrFAT(:, i) = ctFAT(:, i) .* (mufrFAT(:, i) / 1000);  % adapted normalized Stimulus Rate (CT * FR)
         nmufrMAX = ctFAT(:, i) .* (mufrMAX / 1000);  % normalized FR at max excitation
 
+        % Calculate normalized forces
         below = nmufrFAT(:, i) <= 0.4;
         PrFAT(below, i) = nmufrFAT(below, i) / 0.4 * sPr;  % fusion level at adapted firing rate (linear portion)
         above = nmufrFAT(:, i) > 0.4;
         PrFAT(above, i) = 1 - exp(-2 * (nmufrFAT(above, i).^3));  % Non linear portion of curve
 
+        % Calculate current force
         muPt(:, i) = PrFAT(:, i) .* Pnow(:, i); % MU force at the current time (muPt): based on adapted postion on fusion curve
 
         % fusion force at 100% maximum excitation
@@ -409,6 +418,7 @@ for i = 1:fthsamp
             
     end % next excitation (act)
     
+    % We bypass this in the python code by checking firing rates against thresholds directly
     just_recruited = muON == 0 & ((act / res) >= thr);
     muON(just_recruited) = i;
 
@@ -425,7 +435,10 @@ for i = 1:fthsamp
     % Calculating the fatigue (force loss) for each motor unit
 
     % Note this assumes that mufrFAT is >= 0 for all (see orig code below)
-    Pchange(:, i) = -1 * (fatigue / samprate) .* PrFAT(:, i)';
+    Pchange(:, i) = -1 * (fatigue / samprate) .* PrFAT(:, i)'; % fatigue - nominal fatigue rates
+
+    Pchange(:, i)
+    return
 
     if i < 2
         Pnow(:, i+1) = P;
