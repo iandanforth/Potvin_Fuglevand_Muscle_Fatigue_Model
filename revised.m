@@ -1,34 +1,18 @@
 % Motor Unit Based Muscle Fatigue Model by Jim Potvin & Andrew Fuglevand
 % front end (rested size-principle) based on Fuglevand, Winter & Patla (1993)
 % last updated 2017-05-28 by Jim Potvin
-
-% Things to check
 % 
-% Recruitment Thresholds - VERIFIED
-% Peak Firing Rates - VERIFIED
+% Partial vectorization by Ian Danforth
 
-% Peak Twitch Forces - VERIFIED
-% Contraction Times - VERIFIED
-
-% Firing Rates by Excitation - VERIFIED
-% Normalized Firing Rates - VERIFIED
-
-% Normalized Forces - CHECKED, SMALL DIFFERENCE
-
-% The forces appear identical in the sigmoid portion but the linear portion
-% differes. The code here differs from the paper.
-
-% Forces - CHECKED, SMALL DIFFs DUE TO ABOVE
-
-% Total Max Force - VERIFIED
-
-% Nominal Fatigabilities - VERIFIED (Corrected)
-
-% Starting activations - VERIFIED
+% fthtime = 10
+%   - original matlab code:     Run time: 1372.633170 seconds
+%   - vectorized matlab code:   Run time: 19.214544 seconds ~ ~70x
+%   - python code:              Run time: 3.785 seconds - ~360x
 
 
 %clear all
 clc
+start_time = cputime;
 
 %% Model input parameters
 nu = 120;           % number of neurons (ie. motor units) in the modeled pool ("n") 
@@ -63,7 +47,7 @@ tL = 90;            % longest contraction time (90)
 % Excitation Level
 fthscale = 0.5;             % sets %MVC level for the trial duration (100% MVC is 1.00)
 con = '0.50';               % for output file names
-fthtime = 3;              % duration to run trial (seconds)
+fthtime = 10;              % duration to run trial (seconds)
 
 fthsamp = fthtime * samprate; 
 excitations = zeros(1, fthsamp);
@@ -75,7 +59,7 @@ end
 ns = 1:1:fthsamp;   % array of samples for fth
 excitations = excitations(ns);
 
-% Recruitment Threshold Excitation (thr) - VERIFIED
+% Recruitment Threshold Excitation (thr)
 thr = zeros(1, nu);
 n = 1:1:nu;
 b = log(r + (1-mthr)) / (nu-1);             % this was modified from Fuglevand et al (1993) RTE(i) equation (1)
@@ -83,10 +67,7 @@ for i = 1:nu                                % as that did not create the exact r
     thr(i) = a * exp((i-1) * b) - (1 - mthr);
 end
 
-% thr
-% return
-
-% Peak Firing Rate (frp) - VERIFIED
+% Peak Firing Rate (frp)
 % modified from Fuglevand et al (1993) PFR equation (5) to remove thr(1) before ratio
 frdiff = pfr1 - pfrL;
 frp = pfr1 - frdiff * ((thr(n) - thr(1))/(r - thr(1)));
@@ -94,15 +75,12 @@ maxex = thr(nu) + (pfrL - minfr)/mir;       % maximum excitation
 maxact = round(maxex * res);                % max excitation x resolution
 ulr = 100 * thr(nu)/maxex;                  % recruitment threshold (%) of last motor unit
 
-% frp
-% return
-
 
 % Calculation of the rested motor unit twitch properties (these will change with fatigue)
 
 % PRE-CALCULATE FIRING RATES FOR EACH MOTOR UNIT BY EXCITATION LEVEL
 
-% Firing Rates for each MU with increased excitation (act) - VERIFIED
+% Firing Rates for each MU with increased excitation (act)
 mufr = zeros(nu, maxact);
 for act = 1:maxact
     acti = act / res; % Each step is actually a step of <resolution> size.
@@ -131,24 +109,18 @@ end
 
 k = 1:1:maxact;  %range of excitation levels
 
-% Twitch peak force (P) - VERIFIED
+% Twitch peak force (P)
 b = log(rp)/(nu-1);                 % this was modified from Fuglevand et al (1993) P(i) equation (13)
 P = exp(b * (n-1));                 % as that didn't create the exact range of twitch tensions (ie. 'rp') entered
 
-% P
-% return
-
-% Twitch contraction time (ct) - VERIFIED 
+% Twitch contraction time (ct) 
 c = log(rp)/log(rt);                % scale factor
 ct = zeros(1,nu);        
 for mu = 1:nu                       % assigns contraction times to each motor unit (moved into loop)
    ct(mu) = tL * (1/P(mu))^(1/c);
 end
 
-% ct
-% return
-
-% Normalized motor unit firing rates (nmufr) with increased excitation (act) - VERIFIED
+% Normalized motor unit firing rates (nmufr) with increased excitation (act)
 nmufr = zeros(nu, maxact);
 for act = 1:maxact
     nmufr(:, act) = ct' .* (mufr(:, act) / 1000);  % same as CT / ISI  
@@ -164,7 +136,7 @@ end
 % Normalized Force
 % Motor unit force, relative to full fusion (Pr) with increasing excitation
 % based on Figure 2 of Fuglevand et al (1993)
-sPr = 1 - exp(-2 * (0.4^3)); % NOTE - THIS IS JUST SIMPLIFIED TO 0.3 IN THE PAPER - CHECKED
+sPr = 1 - exp(-2 * (0.4^3)); % NOTE - THIS IS JUST SIMPLIFIED TO 0.3 IN THE PAPER
 Pr = zeros(nu, maxact);
 for act = 1:maxact
     below_thresh_indices = nmufr(:, act) <= 0.4;
@@ -185,7 +157,7 @@ end
 %     end
 % end
 
-% Motor unit force (muP) with increased excitation - CHECKED
+% Motor unit force (muP) with increased excitation
 muP = zeros(nu, maxact);
 for act = 1:maxact 
    muP(:,act) = Pr(:,act) .* P';
@@ -437,9 +409,6 @@ for i = 1:fthsamp
     % Note this assumes that mufrFAT is >= 0 for all (see orig code below)
     Pchange(:, i) = -1 * (fatigue / samprate) .* PrFAT(:, i)'; % fatigue - nominal fatigue rates
 
-    Pchange(:, i)
-    return
-
     if i < 2
         Pnow(:, i+1) = P;
     elseif i >= 2
@@ -518,7 +487,7 @@ hold off;
  
 beep;
 
-  
+printf('Total cpu time: %f seconds\n', cputime-start_time);
   
 
 
